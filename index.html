@@ -966,7 +966,7 @@ let synthTimer = null;
 function stopSpeaking() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   clearTimeout(synthTimer);
-  document.getElementById('waveBars').classList.remove('active');
+  document.getElementById('waveBars')?.classList.remove('active');
   isSpeaking = false;
 }
 
