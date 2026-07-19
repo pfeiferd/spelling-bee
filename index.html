@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelling Bee Practice</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:     #1C2E4A;
+      --navy-mid: #26405F;
+      --amber:    #F0A500;
+      --amber-lt: #FFB82E;
+      --card:     #FDFCF9;
+      --ink:      #1B2030;
+      --ink-mid:  #4B5568;
+      --ink-lt:   #9CA3AF;
+      --border:   #E4DDD4;
+      --ok:       #15803D;
+      --ok-bg:    #F0FDF4;
+      --err:      #B91C1C;
+      --err-bg:   #FEF2F2;
+      --radius:   14px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background-color: var(--navy);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem 1rem 2rem;
+    }
+
+    /* ── App shell ── */
+    .app { width: 100%; max-width: 540px; }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.25rem 1.1rem;
+    }
+
+    .brand { display: flex; align-items: center; gap: 0.5rem; }
+
+    .brand-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .streak-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.5);
+      min-width: 60px;
+    }
+
+    .streak-pill .streak-bees {
+      letter-spacing: -0.05em;
+      font-size: 0.9rem;
+    }
+
+    .score-pill {
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .score-pill strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.45), 0 4px 14px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+
+    /* ── Progress bar ── */
+    .progress-track { height: 3px; background: var(--border); }
+    .progress-fill {
+      height: 100%;
+      background: var(--amber);
+      width: 0%;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Bee + bubble row ── */
+    .bee-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.25rem 1.75rem 0.75rem;
+    }
+
+    .bee-wrap {
+      flex-shrink: 0;
+      width: 80px;
+      animation: bee-float 3s ease-in-out infinite;
+      cursor: default;
+    }
+
+    @keyframes bee-float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-7px); }
+    }
+
+    .bee-wrap.bee-jump {
+      animation: bee-jump 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes bee-jump {
+      0%   { transform: translateY(0) scale(1) rotate(0deg); }
+      25%  { transform: translateY(-22px) scale(1.12) rotate(10deg); }
+      55%  { transform: translateY(-14px) scale(1.08) rotate(-6deg); }
+      75%  { transform: translateY(-18px) scale(1.1) rotate(4deg); }
+      100% { transform: translateY(0) scale(1) rotate(0deg); }
+    }
+
+    .bee-wrap.bee-droop {
+      animation: bee-droop 0.5s ease-out forwards;
+    }
+    @keyframes bee-droop {
+      0%   { transform: translateY(0) rotate(0deg); }
+      50%  { transform: translateY(6px) rotate(-10deg); }
+      100% { transform: translateY(3px) rotate(-5deg); }
+    }
+
+    .bee-wrap.bee-spin {
+      animation: bee-spin 0.8s cubic-bezier(0.34,1.2,0.64,1) forwards;
+    }
+    @keyframes bee-spin {
+      0%   { transform: scale(1) rotate(0deg); }
+      50%  { transform: scale(1.3) rotate(180deg) translateY(-10px); }
+      100% { transform: scale(1) rotate(360deg); }
+    }
+
+    /* Wing animation */
+    .bee-wing { animation: wing-beat 0.18s ease-in-out infinite alternate; }
+    .bee-wing-r { animation-delay: 0.09s; }
+    @keyframes wing-beat {
+      from { opacity: 0.75; transform: scaleY(1); }
+      to   { opacity: 0.15; transform: scaleY(0.2); }
+    }
+
+    /* SVG wing needs transform-box */
+    svg .bee-wing {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+    }
+
+    /* ── Speech bubble ── */
+    .speech-bubble {
+      flex: 1;
+      background: var(--navy);
+      color: rgba(255,255,255,0.9);
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 0.65rem 0.9rem;
+      border-radius: 12px;
+      border-bottom-left-radius: 4px;
+      position: relative;
+      line-height: 1.4;
+      min-height: 2.8rem;
+      display: flex;
+      align-items: center;
+      transition: background 0.3s;
+    }
+
+    .speech-bubble::before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 8px solid transparent;
+      border-right-color: var(--navy);
+      border-left: 0;
+    }
+
+    .speech-bubble.bubble-cheer { background: var(--ok); }
+    .speech-bubble.bubble-cheer::before { border-right-color: var(--ok); }
+    .speech-bubble.bubble-sad   { background: #6B3737; }
+    .speech-bubble.bubble-sad::before   { border-right-color: #6B3737; }
+    .speech-bubble.bubble-gold  { background: #7A5200; }
+    .speech-bubble.bubble-gold::before  { border-right-color: #7A5200; }
+
+    /* ── Word area ── */
+    .word-area {
+      padding: 0.5rem 1.75rem 1.25rem;
+      text-align: center;
+    }
+
+    .word-counter {
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-lt);
+      margin-bottom: 1.25rem;
+    }
+
+    .listen-prompt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      min-height: 80px;
+      justify-content: center;
+    }
+
+    .wave-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 32px;
+    }
+
+    .wave-bar {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--amber);
+      opacity: 0.3;
+    }
+
+    .wave-bar:nth-child(1) { height: 14px; }
+    .wave-bar:nth-child(2) { height: 24px; }
+    .wave-bar:nth-child(3) { height: 32px; }
+    .wave-bar:nth-child(4) { height: 20px; }
+    .wave-bar:nth-child(5) { height: 12px; }
+
+    .wave-bars.active .wave-bar {
+      opacity: 1;
+      animation: wave 0.9s ease-in-out infinite;
+    }
+    .wave-bars.active .wave-bar:nth-child(1) { animation-delay: 0.0s; }
+    .wave-bars.active .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .wave-bars.active .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .wave-bars.active .wave-bar:nth-child(4) { animation-delay: 0.1s; }
+    .wave-bars.active .wave-bar:nth-child(5) { animation-delay: 0.0s; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.35); }
+      50%       { transform: scaleY(1); }
+    }
+
+    .listen-hint { font-size: 0.88rem; color: var(--ink-lt); }
+
+    /* Revealed word — animated letters */
+    .word-revealed {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 3rem;
+      font-weight: normal;
+      color: var(--ink);
+      letter-spacing: 0.01em;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.05em;
+    }
+
+    .rletter {
+      display: inline-block;
+      animation: letter-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    @keyframes letter-pop {
+      from { transform: translateY(14px) scale(0.4); opacity: 0; }
+      to   { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    /* ── Listen controls ── */
+    .listen-controls {
+      display: flex;
+      gap: 0.7rem;
+      padding: 0.9rem 1.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      border: none;
+      transition: background 0.13s, color 0.13s, border-color 0.13s, opacity 0.13s;
+    }
+
+    .btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+    .btn:disabled { opacity: 0.38; cursor: default; }
+
+    .btn-hear { background: var(--navy); color: #fff; flex: 1; }
+    .btn-hear:not(:disabled):hover { background: var(--navy-mid); }
+
+    .btn-announce { background: transparent; color: var(--ink-mid); border: 1.5px solid var(--border); flex: 1; }
+    .btn-announce:not(:disabled):hover { border-color: var(--ink-lt); color: var(--ink); }
+
+    /* ── Input area ── */
+    .input-area { padding: 1rem 1.75rem 1.5rem; }
+
+    .input-label {
+      display: block;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-lt);
+      margin-bottom: 0.5rem;
+    }
+
+    .input-row { display: flex; gap: 0.65rem; }
+
+    .spell-input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 1.05rem;
+      font-family: Georgia, serif;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+      min-width: 0;
+    }
+    .spell-input:focus { border-color: var(--amber); }
+    .spell-input:disabled { background: #F7F5F0; }
+
+    .btn-check {
+      padding: 0.75rem 1.3rem;
+      background: var(--amber);
+      color: #2A1A00;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.13s, transform 0.1s;
+    }
+    .btn-check:not(:disabled):hover { background: var(--amber-lt); }
+    .btn-check:not(:disabled):active { transform: scale(0.96); }
+
+    /* ── Feedback ── */
+    .feedback { padding: 0 1.75rem 1.5rem; display: none; }
+    .feedback.visible { display: block; }
+
+    .feedback-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem 1.1rem;
+      border-radius: 10px;
+      margin-bottom: 0.9rem;
+    }
+    .feedback-banner.ok  { background: var(--ok-bg); }
+    .feedback-banner.err { background: var(--err-bg); }
+
+    .fb-icon { font-size: 1.2rem; flex-shrink: 0; line-height: 1.25; }
+    .fb-text { flex: 1; }
+    .fb-heading { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.15rem; }
+    .ok  .fb-heading { color: var(--ok); }
+    .err .fb-heading { color: var(--err); }
+    .fb-detail { font-size: 0.85rem; color: var(--ink-mid); line-height: 1.45; }
+    .fb-word { font-family: Georgia, serif; color: var(--ink); }
+
+    .btn-next {
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--navy);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.13s;
+    }
+    .btn-next:hover { background: var(--navy-mid); }
+
+    /* ── No speech warning ── */
+    .no-speech-warn {
+      display: none;
+      font-size: 0.8rem;
+      color: #92400E;
+      background: #FEF3C7;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      margin: 0 1.75rem 1rem;
+      text-align: center;
+    }
+    .no-speech-warn.visible { display: block; }
+
+    /* ── Achievement toast ── */
+    #achievementToast {
+      position: fixed;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      background: #1A1A1A;
+      color: #fff;
+      padding: 0.85rem 1.25rem;
+      border-radius: 40px;
+      font-size: 0.88rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+      z-index: 9999;
+      transition: top 0.4s cubic-bezier(0.34,1.4,0.64,1);
+      white-space: nowrap;
+      border: 1.5px solid rgba(255,255,255,0.1);
+    }
+    #achievementToast.visible { top: 20px; }
+    .ach-icon { font-size: 1.4rem; }
+    .ach-title { font-weight: 700; font-size: 0.9rem; }
+    .ach-msg { font-size: 0.78rem; color: rgba(255,255,255,0.6); }
+
+    /* ── Floating emoji particles ── */
+    .float-star {
+      position: fixed;
+      pointer-events: none;
+      font-size: 1.5rem;
+      z-index: 9998;
+      animation: float-up 1.2s ease-out forwards;
+    }
+    @keyframes float-up {
+      0%   { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-120px) scale(0.5); opacity: 0; }
+    }
+
+    /* ── Confetti canvas ── */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9997;
+      display: none;
+    }
+
+    /* ── Results card ── */
+    .results-card {
+      display: none;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.45), 0 4px 14px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .results-card.visible { display: block; }
+
+    .results-top {
+      padding: 2.5rem 2rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .results-medal { font-size: 4rem; display: block; margin-bottom: 0.85rem; animation: medal-pop 0.6s cubic-bezier(0.34,1.56,0.64,1) both 0.2s; }
+    @keyframes medal-pop {
+      from { transform: scale(0) rotate(-15deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .results-title { font-family: Georgia, serif; font-size: 1.75rem; color: var(--ink); margin-bottom: 0.3rem; }
+    .results-score { font-size: 3rem; font-weight: 800; color: var(--amber); font-variant-numeric: tabular-nums; line-height: 1; margin: 0.85rem 0 0.3rem; }
+    .results-subtitle { font-size: 0.9rem; color: var(--ink-mid); }
+
+    .results-body { padding: 1.5rem 2rem 2rem; }
+
+    .missed-title { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--err); font-weight: 700; margin-bottom: 0.7rem; }
+    .missed-list { border: 1.5px solid var(--err-bg); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; }
+    .missed-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; border-bottom: 1px solid var(--err-bg); gap: 1rem; }
+    .missed-item:last-child { border-bottom: none; }
+    .missed-correct { font-family: Georgia, serif; font-size: 1rem; color: var(--ink); }
+    .missed-typed { font-size: 0.82rem; color: var(--ink-lt); text-align: right; }
+    .missed-typed span { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.1rem; }
+
+    .all-correct-msg {
+      background: var(--ok-bg);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      color: var(--ok);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-restart {
+      width: 100%;
+      padding: 0.95rem;
+      background: var(--amber);
+      color: #2A1A00;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.13s;
+    }
+    .btn-restart:hover { background: var(--amber-lt); }
+
+    /* ── Motion preference ── */
+    @media (prefers-reduced-motion: reduce) {
+      .progress-fill, .bee-wrap, .speech-bubble { transition: none; animation: none !important; }
+      .wave-bars.active .wave-bar { animation: none; opacity: 1; }
+      .rletter { animation: none; }
+      .float-star { animation: none; opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<div id="achievementToast">
+  <span class="ach-icon" id="achIcon">⭐</span>
+  <div>
+    <div class="ach-title" id="achTitle"></div>
+    <div class="ach-msg" id="achMsg"></div>
+  </div>
+</div>
+
+<div class="app">
+  <header class="header">
+    <div class="brand">
+      <!-- Honeycomb hex icon -->
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="#F0A500" opacity="0.9"/>
+        <text x="12" y="16.5" text-anchor="middle" font-size="10" fill="#1C2E4A" font-family="system-ui" font-weight="800">B</text>
+      </svg>
+      <span class="brand-name">Spelling Bee</span>
+    </div>
+    <div class="header-right">
+      <div class="streak-pill" id="streakPill" style="display:none">
+        <span class="streak-bees" id="streakBees"></span>
+      </div>
+      <div class="score-pill">
+        Score <strong id="scoreNum">0</strong> / <span id="scoreDen">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Practice card -->
+  <div class="card" id="practiceCard">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <!-- Bee mascot + speech bubble -->
+    <div class="bee-row">
+      <div class="bee-wrap" id="beeWrap">
+        <svg id="beeSvg" viewBox="0 0 100 130" width="80" height="104" aria-hidden="true" role="img">
+          <!-- Wings (behind body) -->
+          <ellipse class="bee-wing" cx="22" cy="68" rx="24" ry="12" fill="rgba(190,225,255,0.65)" transform="rotate(-22 40 80)"/>
+          <ellipse class="bee-wing bee-wing-r" cx="78" cy="68" rx="24" ry="12" fill="rgba(190,225,255,0.65)" transform="rotate(22 60 80)"/>
+          <!-- Abdomen -->
+          <ellipse cx="50" cy="97" rx="27" ry="30" fill="#F5C518"/>
+          <!-- Stripes (clipped to body) -->
+          <clipPath id="bc"><ellipse cx="50" cy="97" rx="27" ry="30"/></clipPath>
+          <rect x="23" y="87" width="54" height="11" fill="#2C1F00" clip-path="url(#bc)" opacity="0.8"/>
+          <rect x="23" y="103" width="54" height="11" fill="#2C1F00" clip-path="url(#bc)" opacity="0.8"/>
+          <!-- Stinger -->
+          <polygon points="50,125 46,133 54,133" fill="#D4A800"/>
+          <!-- Head -->
+          <circle cx="50" cy="53" r="23" fill="#F5C518"/>
+          <!-- Head shadow/sheen -->
+          <ellipse cx="44" cy="42" rx="10" ry="7" fill="rgba(255,255,220,0.3)"/>
+          <!-- Eyes - whites -->
+          <circle cx="40" cy="49" r="8" fill="white"/>
+          <circle cx="60" cy="49" r="8" fill="white"/>
+          <!-- Pupils -->
+          <circle id="pupL" cx="41" cy="50" r="5" fill="#1C1C2E"/>
+          <circle id="pupR" cx="61" cy="50" r="5" fill="#1C1C2E"/>
+          <!-- Eye shines -->
+          <circle cx="43" cy="47" r="2" fill="white"/>
+          <circle cx="63" cy="47" r="2" fill="white"/>
+          <!-- Cheeks (show when happy) -->
+          <circle id="chkL" cx="33" cy="60" r="7" fill="rgba(255,120,100,0)"/>
+          <circle id="chkR" cx="67" cy="60" r="7" fill="rgba(255,120,100,0)"/>
+          <!-- Mouth -->
+          <path id="beeMouth" d="M 42 64 Q 50 70 58 64" fill="none" stroke="#2C1F00" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Antennae -->
+          <line x1="43" y1="31" x2="30" y2="10" stroke="#2C1F00" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="30" cy="10" r="4.5" fill="#F5C518" stroke="#2C1F00" stroke-width="2"/>
+          <line x1="57" y1="31" x2="70" y2="10" stroke="#2C1F00" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="70" cy="10" r="4.5" fill="#F5C518" stroke="#2C1F00" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="speech-bubble" id="speechBubble">Let's bee-gin! 🐝</div>
+    </div>
+
+    <div class="word-area">
+      <div class="word-counter" id="wordCounter">Word 1 of 20</div>
+      <div id="wordDisplay">
+        <div class="listen-prompt">
+          <div class="wave-bars" id="waveBars">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+          <div class="listen-hint">Listen to the word, then type your spelling.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="listen-controls">
+      <button class="btn btn-hear" id="btnHear" onclick="speakWord()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+        Hear Word
+      </button>
+      <button class="btn btn-announce" id="btnAnnounce" onclick="speakAnnouncement()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        </svg>
+        Full Announcement
+      </button>
+    </div>
+
+    <div class="no-speech-warn" id="noSpeechWarn">
+      Speech not available — try opening this file in Chrome, Edge, or Safari.
+    </div>
+
+    <div class="input-area">
+      <label class="input-label" for="spellInput">Your spelling</label>
+      <div class="input-row">
+        <input type="text" id="spellInput" class="spell-input"
+               placeholder="Type your answer…"
+               autocomplete="off" autocorrect="off"
+               autocapitalize="none" spellcheck="false">
+        <button class="btn btn-check" id="btnCheck" onclick="checkAnswer()">Check</button>
+      </div>
+    </div>
+
+    <div class="feedback" id="feedbackArea">
+      <div class="feedback-banner" id="feedbackBanner">
+        <div class="fb-icon" id="fbIcon"></div>
+        <div class="fb-text">
+          <div class="fb-heading" id="fbHeading"></div>
+          <div class="fb-detail" id="fbDetail"></div>
+        </div>
+      </div>
+      <button class="btn btn-next" id="btnNext" onclick="nextWord()">Next Word →</button>
+    </div>
+  </div>
+
+  <!-- Results card -->
+  <div class="results-card" id="resultsCard">
+    <div class="results-top">
+      <span class="results-medal" id="resultsMedal">🏆</span>
+      <div class="results-title" id="resultsTitle">Session Complete!</div>
+      <div class="results-score" id="resultsScore">0 / 20</div>
+      <div class="results-subtitle" id="resultsSubtitle"></div>
+    </div>
+    <div class="results-body">
+      <div id="missedSection"></div>
+      <button class="btn-restart" onclick="startSession()">Practice Again 🐝</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Word bank ──────────────────────────────────────────────────────────────── */
+const WORDS = [
+  { word:"accommodate",  pos:"verb",      def:"to have room for; to make fit",                                   sentence:"The new gymnasium can accommodate the entire student body." },
+  { word:"achievement",  pos:"noun",      def:"something accomplished through effort or skill",                  sentence:"Winning the science fair was her greatest academic achievement." },
+  { word:"anonymous",    pos:"adjective", def:"having an unknown or unnamed source",                             sentence:"The anonymous donor gave a large sum to the school library." },
+  { word:"atmosphere",   pos:"noun",      def:"the layer of gases surrounding a planet; also, the mood of a place", sentence:"The atmosphere at the concert was electric with excitement." },
+  { word:"boundary",     pos:"noun",      def:"a line marking the limits of an area",                           sentence:"The fence marked the boundary between the two properties." },
+  { word:"campaign",     pos:"noun",      def:"an organized course of action to achieve a goal",                sentence:"The students ran a campaign to raise money for the playground." },
+  { word:"circumstances",pos:"noun",      def:"the conditions that affect a situation",                         sentence:"Under the circumstances, the team decided to postpone the game." },
+  { word:"conscience",   pos:"noun",      def:"a person's moral sense of right and wrong",                     sentence:"His conscience would not let him keep the money he found." },
+  { word:"convenience",  pos:"noun",      def:"the state of being easy to do or use",                          sentence:"The corner store was chosen for its convenience." },
+  { word:"curiosity",    pos:"noun",      def:"a strong desire to know or learn something",                     sentence:"Her curiosity about stars led her to study astronomy." },
+  { word:"deliberately", pos:"adverb",    def:"done consciously and intentionally",                             sentence:"She deliberately slowed down so her friend could keep up." },
+  { word:"democracy",    pos:"noun",      def:"a system of government where citizens vote for their leaders",   sentence:"In a democracy, every citizen's vote is counted equally." },
+  { word:"discipline",   pos:"noun",      def:"training that produces controlled behavior",                     sentence:"The discipline required to practice piano helped her improve quickly." },
+  { word:"embarrass",    pos:"verb",      def:"to cause to feel awkward or ashamed",                           sentence:"He did not want to embarrass his friend by pointing out the mistake." },
+  { word:"environment",  pos:"noun",      def:"the surroundings in which a person, animal, or plant lives",    sentence:"We must all do our part to protect the environment." },
+  { word:"exaggerate",   pos:"verb",      def:"to represent something as greater than it really is",           sentence:"He tended to exaggerate the size of the fish he caught." },
+  { word:"especially",   pos:"adverb",    def:"to a greater degree; particularly",                             sentence:"She loved all animals, but she was especially fond of horses." },
+  { word:"experiment",   pos:"noun",      def:"a scientific test to find out something",                       sentence:"The class designed an experiment to test how sunlight affects plant growth." },
+  { word:"familiar",     pos:"adjective", def:"well known or recognized",                                      sentence:"The smell of freshly baked bread was familiar and comforting." },
+  { word:"government",   pos:"noun",      def:"the group of people with authority to control a country",       sentence:"The government announced plans to build a new public library." },
+  { word:"guarantee",    pos:"verb",      def:"to provide a formal assurance; to promise",                     sentence:"The store will guarantee your satisfaction or return your money." },
+  { word:"humorous",     pos:"adjective", def:"causing laughter; funny",                                       sentence:"The humorous story made the whole class burst into laughter." },
+  { word:"imaginary",    pos:"adjective", def:"existing only in the imagination; not real",                    sentence:"As a young child, she had an imaginary friend named Rosie." },
+  { word:"independence", pos:"noun",      def:"freedom from outside control",                                   sentence:"The country celebrates its independence every year with fireworks." },
+  { word:"intelligence", pos:"noun",      def:"the ability to acquire and use knowledge and skills",           sentence:"The scientist's intelligence helped her solve the complex problem." },
+  { word:"irrelevant",   pos:"adjective", def:"not connected to the matter being discussed",                   sentence:"Please leave out details that are irrelevant to your main argument." },
+  { word:"judgment",     pos:"noun",      def:"the ability to make considered decisions; an opinion",          sentence:"The referee's judgment was trusted by all the players." },
+  { word:"knowledge",    pos:"noun",      def:"facts and skills acquired through experience or education",     sentence:"Her knowledge of history helped her win the trivia contest." },
+  { word:"lieutenant",   pos:"noun",      def:"a deputy or substitute acting for a superior",                  sentence:"The lieutenant led the team when the captain was away." },
+  { word:"magnificent",  pos:"adjective", def:"impressively beautiful or elaborate",                           sentence:"The view from the mountain top was simply magnificent." },
+  { word:"necessary",    pos:"adjective", def:"required to be done; essential",                                sentence:"It is necessary to practice regularly if you want to improve." },
+  { word:"occasion",     pos:"noun",      def:"a special event or ceremony",                                   sentence:"Graduation is an occasion that calls for celebration." },
+  { word:"occurrence",   pos:"noun",      def:"an incident or event; the fact of something happening",         sentence:"Rain in the desert is a rare occurrence." },
+  { word:"peculiar",     pos:"adjective", def:"strange or odd; unusual",                                       sentence:"There was a peculiar smell coming from the old attic." },
+  { word:"perseverance", pos:"noun",      def:"continued effort despite difficulty",                           sentence:"Her perseverance through many setbacks finally led to her dream." },
+  { word:"privilege",    pos:"noun",      def:"a special right or advantage",                                  sentence:"Being chosen as class president is a privilege and a responsibility." },
+  { word:"recommend",    pos:"verb",      def:"to suggest as worthy of use or acceptance",                     sentence:"The librarian would recommend the best book for each reader." },
+  { word:"rhythm",       pos:"noun",      def:"a strong, regular, repeated pattern of sound or movement",      sentence:"The drummer kept a steady rhythm throughout the entire song." },
+  { word:"separate",     pos:"adjective", def:"set apart; not joined or combined",                             sentence:"The teacher asked students to separate into two groups." },
+  { word:"significance", pos:"noun",      def:"the quality of being important or meaningful",                  sentence:"The significance of the discovery was understood by scientists worldwide." },
+  { word:"sufficient",   pos:"adjective", def:"enough; adequate for the purpose",                              sentence:"Make sure you drink sufficient water throughout the day." },
+  { word:"suspicious",   pos:"adjective", def:"having a cautious distrust of someone or something",            sentence:"The detective noticed something suspicious about the empty shop." },
+  { word:"temperature",  pos:"noun",      def:"the degree of heat or cold measured by a thermometer",          sentence:"The temperature dropped below freezing overnight." },
+  { word:"thorough",     pos:"adjective", def:"complete with regard to every detail",                          sentence:"She did a thorough review of her essay before turning it in." },
+  { word:"tradition",    pos:"noun",      def:"a custom passed down within a group over time",                 sentence:"Baking cookies on the holidays became a beloved family tradition." },
+  { word:"triumphant",   pos:"adjective", def:"having won a battle or contest; victorious",                   sentence:"The triumphant team held the trophy high above their heads." },
+  { word:"unanimous",    pos:"adjective", def:"fully in agreement; without opposition",                        sentence:"The class made a unanimous decision to adopt the puppy as their class pet." },
+  { word:"vocabulary",   pos:"noun",      def:"the body of words used in a language or by a person",          sentence:"Reading widely is one of the best ways to expand your vocabulary." },
+  { word:"dimension",    pos:"noun",      def:"a measurable extent, such as length or width",                  sentence:"The architect noted the exact dimension of each room in the house." },
+  { word:"exquisite",    pos:"adjective", def:"extremely beautiful and delicate",                              sentence:"The jeweler crafted an exquisite necklace from silver and sapphire." },
+];
+
+/* ── Bee messages ───────────────────────────────────────────────────────────── */
+const MSG = {
+  start:   ["Let's bee-gin! 🐝", "Ready to spell? 🌟", "You've got this! 💪", "Time to buzz! 🐝"],
+  heard:   ["Got it? Now spell it!", "Type what you heard! ✏️", "You can do it!", "Spell it out! 🔤"],
+  correct: ["Bee-autiful! 🌟", "That's amazing! ✨", "Spot on! 🎯", "You're on fire! 🔥", "Brilliant! 💫", "Nailed it! 🎉", "Incredible! 🌈", "Bee-yond perfect! 🏆"],
+  wrong:   ["So close! Keep going 💪", "Don't give up! 🐝", "Almost! You've got this!", "Keep buzzing! 🌟", "You'll get the next one!"],
+  streak3: ["3 in a row! You're buzzing! 🔥"],
+  streak5: ["FIVE in a row! Unstoppable! 🌟"],
+  streak10:["TEN in a row! You're the Queen Bee! 👑"],
+};
+
+/* ── State ──────────────────────────────────────────────────────────────────── */
+const SESSION_SIZE = 20;
+let session = [], index = 0, score = 0, missedWords = [], streak = 0;
+let checked = false, isSpeaking = false;
+let audioCtx = null;
+let earnedAch = new Set();
+let achQueue = [];
+let achShowing = false;
+
+/* ── Helpers ─────────────────────────────────────────────────────────────────*/
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function shuffle(a) {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+
+/* ── Bee expressions ─────────────────────────────────────────────────────────*/
+function setExpression(state) {
+  const mouth  = document.getElementById('beeMouth');
+  const chkL   = document.getElementById('chkL');
+  const chkR   = document.getElementById('chkR');
+  const wrap   = document.getElementById('beeWrap');
+  const pupL   = document.getElementById('pupL');
+  const pupR   = document.getElementById('pupR');
+
+  // Reset animation classes
+  wrap.classList.remove('bee-jump','bee-droop','bee-spin');
+
+  if (state === 'happy') {
+    mouth.setAttribute('d', 'M 40 62 Q 50 74 60 62');
+    chkL.style.fill = 'rgba(255,110,90,0.42)';
+    chkR.style.fill = 'rgba(255,110,90,0.42)';
+    pupL.setAttribute('cx','40'); pupR.setAttribute('cx','61');
+    void wrap.offsetWidth; // reflow
+    wrap.classList.add('bee-jump');
+    setTimeout(() => { wrap.classList.remove('bee-jump'); }, 750);
+  } else if (state === 'sad') {
+    mouth.setAttribute('d', 'M 42 68 Q 50 62 58 68');
+    chkL.style.fill = 'rgba(255,110,90,0)';
+    chkR.style.fill = 'rgba(255,110,90,0)';
+    pupL.setAttribute('cx','41'); pupR.setAttribute('cx','61');
+    void wrap.offsetWidth;
+    wrap.classList.add('bee-droop');
+    setTimeout(() => { wrap.classList.remove('bee-droop'); }, 600);
+  } else if (state === 'spin') {
+    mouth.setAttribute('d', 'M 40 62 Q 50 74 60 62');
+    chkL.style.fill = 'rgba(255,110,90,0.5)';
+    chkR.style.fill = 'rgba(255,110,90,0.5)';
+    void wrap.offsetWidth;
+    wrap.classList.add('bee-spin');
+    setTimeout(() => { wrap.classList.remove('bee-spin'); }, 850);
+  } else {
+    // neutral
+    mouth.setAttribute('d', 'M 42 64 Q 50 70 58 64');
+    chkL.style.fill = 'rgba(255,110,90,0)';
+    chkR.style.fill = 'rgba(255,110,90,0)';
+    pupL.setAttribute('cx','41'); pupR.setAttribute('cx','61');
+  }
+}
+
+/* ── Speech bubble ───────────────────────────────────────────────────────────*/
+function setBubble(text, type = '') {
+  const b = document.getElementById('speechBubble');
+  b.textContent = text;
+  b.className = 'speech-bubble' + (type ? ' bubble-' + type : '');
+}
+
+/* ── Sound effects (Web Audio) ───────────────────────────────────────────────*/
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function tones(freqs, { type='sine', step=0.1, dur=0.28, vol=0.22 } = {}) {
+  try {
+    const ctx = getCtx();
+    freqs.forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = type; o.frequency.value = f;
+      const t = ctx.currentTime + i * step;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.04);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      o.start(t); o.stop(t + dur + 0.05);
+    });
+  } catch(e) {}
+}
+
+const playCorrect     = () => tones([523,659,784,1047],     { step:0.09, dur:0.26, vol:0.18 });
+const playWrong       = () => tones([330,294,262],           { step:0.13, dur:0.35, vol:0.14 });
+const playAchievement = () => tones([523,659,784,1047,1319], { step:0.08, dur:0.4,  vol:0.18 });
+const playStreak      = () => tones([784,1047,1319],         { step:0.1,  dur:0.35, vol:0.2  });
+
+/* ── Confetti ────────────────────────────────────────────────────────────────*/
+function launchConfetti(originX, originY) {
+  const canvas = document.getElementById('confettiCanvas');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  const COLORS = ['#F0A500','#16A34A','#3B82F6','#EC4899','#8B5CF6','#EF4444','#F59E0B','#10B981'];
+  const particles = Array.from({length:80}, () => ({
+    x: originX, y: originY,
+    vx: (Math.random()-0.5)*14,
+    vy: -(Math.random()*12+4),
+    color: pick(COLORS),
+    w: Math.random()*9+3,
+    h: Math.random()*5+2,
+    rot: Math.random()*Math.PI*2,
+    rspd: (Math.random()-0.5)*0.35,
+    grav: 0.28+Math.random()*0.2,
+    alpha: 1,
+  }));
+  let frame = 0;
+  (function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    particles.forEach(p => {
+      if (p.alpha <= 0) return;
+      alive = true;
+      p.x += p.vx; p.y += p.vy; p.vy += p.grav; p.vx *= 0.98;
+      p.rot += p.rspd;
+      if (frame > 55) p.alpha -= 0.022;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.fillStyle = p.color;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    frame++;
+    if (alive) requestAnimationFrame(draw);
+    else canvas.style.display = 'none';
+  })();
+}
+
+/* ── Floating emoji particles ────────────────────────────────────────────────*/
+function floatEmojis(x, y) {
+  const emojis = ['⭐','✨','🌟','💫','🎉'];
+  for (let i = 0; i < 5; i++) {
+    const el = document.createElement('div');
+    el.className = 'float-star';
+    el.textContent = pick(emojis);
+    el.style.left = (x + (Math.random()-0.5)*100) + 'px';
+    el.style.top  = y + 'px';
+    el.style.animationDelay = (Math.random()*0.25) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1600);
+  }
+}
+
+/* ── Achievement toast queue ─────────────────────────────────────────────────*/
+function queueAch(icon, title, msg) {
+  achQueue.push({ icon, title, msg });
+  if (!achShowing) processAchQueue();
+}
+
+function processAchQueue() {
+  if (!achQueue.length) { achShowing = false; return; }
+  achShowing = true;
+  const { icon, title, msg } = achQueue.shift();
+  const toast = document.getElementById('achievementToast');
+  document.getElementById('achIcon').textContent  = icon;
+  document.getElementById('achTitle').textContent = title;
+  document.getElementById('achMsg').textContent   = msg;
+  playAchievement();
+  toast.classList.add('visible');
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(processAchQueue, 500);
+  }, 3000);
+}
+
+function checkAchievements(correct) {
+  const achDefs = [
+    { id:'first',  cond: correct && score === 1,   icon:'⭐', title:'First Buzz!',   msg:'You got your first word right!' },
+    { id:'str3',   cond: streak === 3,              icon:'🔥', title:'Hot Streak!',   msg:'3 correct words in a row!' },
+    { id:'str5',   cond: streak === 5,              icon:'💫', title:'Five Alive!',   msg:'5 in a row — you\'re incredible!' },
+    { id:'half',   cond: index === SESSION_SIZE/2,  icon:'🎯', title:'Halfway There!',msg:'Keep going — halfway done!' },
+    { id:'str10',  cond: streak === 10,             icon:'👑', title:'Queen Bee!',    msg:'10 in a row! Absolutely amazing!' },
+    { id:'all10',  cond: correct && score === 10,   icon:'🌟', title:'Ten Correct!',  msg:'10 words spelled perfectly!' },
+  ];
+  for (const a of achDefs) {
+    if (a.cond && !earnedAch.has(a.id)) {
+      earnedAch.add(a.id);
+      setTimeout(() => queueAch(a.icon, a.title, a.msg), 500);
+    }
+  }
+}
+
+/* ── Score / streak display ──────────────────────────────────────────────────*/
+function updateHeader() {
+  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('scoreDen').textContent = index;
+  const pill = document.getElementById('streakPill');
+  if (streak >= 2) {
+    pill.style.display = 'flex';
+    document.getElementById('streakBees').textContent = '🐝'.repeat(Math.min(streak,5)) + (streak>5?` ×${streak}`:'');
+  } else {
+    pill.style.display = 'none';
+  }
+}
+
+/* ── Speech synthesis ────────────────────────────────────────────────────────*/
+let synthTimer = null;
+
+function stopSpeaking() {
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  clearTimeout(synthTimer);
+  document.getElementById('waveBars').classList.remove('active');
+  isSpeaking = false;
+}
+
+function speakText(text, onEnd) {
+  if (!('speechSynthesis' in window)) {
+    document.getElementById('noSpeechWarn').classList.add('visible');
+    return;
+  }
+  stopSpeaking();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 0.87; utt.pitch = 1; utt.lang = 'en-US';
+  utt.onstart = () => {
+    isSpeaking = true;
+    document.getElementById('waveBars').classList.add('active');
+    setBubble(pick(MSG.heard));
+  };
+  utt.onend = () => {
+    isSpeaking = false;
+    document.getElementById('waveBars').classList.remove('active');
+    if (onEnd) onEnd();
+  };
+  utt.onerror = () => {
+    isSpeaking = false;
+    document.getElementById('waveBars').classList.remove('active');
+  };
+  window.speechSynthesis.speak(utt);
+}
+
+function speakWord() {
+  const w = session[index];
+  speakText(w.word);
+}
+
+async function speakAnnouncement() {
+  const w = session[index];
+  document.getElementById('btnHear').disabled     = true;
+  document.getElementById('btnAnnounce').disabled = true;
+  const parts = [
+    w.word,
+    `${w.pos}. ${w.def}.`,
+    `${w.word} in a sentence: ${w.sentence}`,
+    w.word,
+  ];
+  for (let i = 0; i < parts.length; i++) {
+    await new Promise(res => speakText(parts[i], res));
+    if (i < parts.length - 1) await new Promise(r => setTimeout(r, 280));
+  }
+  document.getElementById('btnHear').disabled     = false;
+  document.getElementById('btnAnnounce').disabled = false;
+}
+
+/* ── Session lifecycle ───────────────────────────────────────────────────────*/
+function startSession() {
+  const pool = shuffle(WORDS);
+  session = pool.slice(0, SESSION_SIZE);
+  index = 0; score = 0; streak = 0;
+  missedWords = []; earnedAch.clear();
+
+  document.getElementById('practiceCard').style.display = '';
+  document.getElementById('resultsCard').classList.remove('visible');
+
+  setExpression('neutral');
+  setBubble(pick(MSG.start));
+  updateHeader();
+  loadWord();
+}
+
+function loadWord() {
+  checked = false;
+  stopSpeaking();
+
+  document.getElementById('wordCounter').textContent = `Word ${index + 1} of ${SESSION_SIZE}`;
+  document.getElementById('progressFill').style.width = `${(index / SESSION_SIZE) * 100}%`;
+
+  document.getElementById('wordDisplay').innerHTML = `
+    <div class="listen-prompt">
+      <div class="wave-bars" id="waveBars">
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+      <div class="listen-hint">Listen to the word, then type your spelling.</div>
+    </div>`;
+
+  const input = document.getElementById('spellInput');
+  input.value = ''; input.disabled = false;
+
+  document.getElementById('btnHear').disabled     = false;
+  document.getElementById('btnAnnounce').disabled = false;
+  document.getElementById('btnCheck').disabled    = false;
+  document.getElementById('feedbackArea').classList.remove('visible');
+
+  setExpression('neutral');
+  setTimeout(() => input.focus(), 50);
+}
+
+function revealWord(word) {
+  const letters = word.split('').map((ch, i) =>
+    `<span class="rletter" style="animation-delay:${i*0.055}s">${ch === ' ' ? '&nbsp;' : ch}</span>`
+  ).join('');
+  document.getElementById('wordDisplay').innerHTML =
+    `<div class="word-revealed">${letters}</div>`;
+}
+
+function checkAnswer() {
+  if (checked) return;
+  const w = session[index];
+  const typed = document.getElementById('spellInput').value.trim().toLowerCase();
+  if (!typed) { document.getElementById('spellInput').focus(); return; }
+
+  checked = true;
+  stopSpeaking();
+
+  const correct = typed === w.word.toLowerCase();
+
+  if (correct) {
+    score++;
+    streak++;
+  } else {
+    streak = 0;
+    missedWords.push({ word: w.word, typed });
+  }
+
+  index++;
+  updateHeader();
+  revealWord(w.word);
+
+  // Disable controls
+  document.getElementById('spellInput').disabled    = true;
+  document.getElementById('btnCheck').disabled      = true;
+  document.getElementById('btnHear').disabled       = true;
+  document.getElementById('btnAnnounce').disabled   = true;
+
+  // Feedback banner
+  const banner = document.getElementById('feedbackBanner');
+  const fbIcon = document.getElementById('fbIcon');
+  const fbHead = document.getElementById('fbHeading');
+  const fbDet  = document.getElementById('fbDetail');
+
+  if (correct) {
+    banner.className = 'feedback-banner ok';
+    fbIcon.textContent = '✓';
+    fbHead.textContent = 'Correct!';
+    fbDet.innerHTML = `<span class="fb-word">${w.word}</span> — you spelled it perfectly.`;
+
+    playCorrect();
+    setExpression('happy');
+    setBubble(pick(MSG.correct), 'cheer');
+
+    // Confetti + float from word display position
+    const wordEl = document.getElementById('wordDisplay');
+    if (wordEl) {
+      const r = wordEl.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      launchConfetti(cx, cy);
+      floatEmojis(cx, cy);
+    }
+
+    // Streak messages
+    if (streak === 3) { setBubble(pick(MSG.streak3), 'gold'); setExpression('spin'); playStreak(); }
+    if (streak === 5) { setBubble(pick(MSG.streak5), 'gold'); setExpression('spin'); playStreak(); }
+    if (streak === 10){ setBubble(pick(MSG.streak10),'gold'); setExpression('spin'); playStreak(); }
+
+  } else {
+    banner.className = 'feedback-banner err';
+    fbIcon.textContent = '✗';
+    fbHead.textContent = 'Not quite.';
+    fbDet.innerHTML = `The correct spelling is <span class="fb-word">${w.word}</span>. You wrote: "${typed}"`;
+
+    playWrong();
+    setExpression('sad');
+    setBubble(pick(MSG.wrong), 'sad');
+  }
+
+  document.getElementById('feedbackArea').classList.add('visible');
+  checkAchievements(correct);
+  document.getElementById('btnNext').focus();
+}
+
+function nextWord() {
+  if (index >= SESSION_SIZE) { showResults(); return; }
+  setBubble(pick(MSG.start));
+  loadWord();
+}
+
+/* ── Results ─────────────────────────────────────────────────────────────────*/
+function showResults() {
+  document.getElementById('practiceCard').style.display = 'none';
+  document.getElementById('progressFill').style.width   = '100%';
+
+  const pct = Math.round((score / SESSION_SIZE) * 100);
+  let medal, title, subtitle;
+
+  if (pct === 100) {
+    medal = '🏆'; title = 'Perfect Score!';
+    subtitle = 'You spelled every single word correctly. Phenomenal!';
+    // big celebration
+    const cx = window.innerWidth/2, cy = window.innerHeight/2;
+    launchConfetti(cx, cy);
+    setTimeout(() => launchConfetti(cx-150, cy+100), 400);
+    setTimeout(() => launchConfetti(cx+150, cy+100), 700);
+  } else if (pct >= 80) {
+    medal = '🥇'; title = 'Excellent Work!';
+    subtitle = `${score} out of ${SESSION_SIZE} — you're ready for competition!`;
+  } else if (pct >= 60) {
+    medal = '🥈'; title = 'Great Job!';
+    subtitle = `${score} out of ${SESSION_SIZE} — keep practicing the words below.`;
+  } else {
+    medal = '📚'; title = 'Keep Practicing!';
+    subtitle = `${score} out of ${SESSION_SIZE} — review the missed words and try again.`;
+  }
+
+  document.getElementById('resultsMedal').textContent   = medal;
+  document.getElementById('resultsTitle').textContent   = title;
+  document.getElementById('resultsScore').textContent   = `${score} / ${SESSION_SIZE}`;
+  document.getElementById('resultsSubtitle').textContent = subtitle;
+
+  const sec = document.getElementById('missedSection');
+  if (missedWords.length === 0) {
+    sec.innerHTML = `<div class="all-correct-msg">🌟 Zero mistakes — flawless spelling! 🌟</div>`;
+  } else {
+    const items = missedWords.map(m => `
+      <div class="missed-item">
+        <div class="missed-correct">${m.word}</div>
+        <div class="missed-typed"><span>you wrote</span>${m.typed}</div>
+      </div>`).join('');
+    sec.innerHTML = `
+      <div class="missed-title">Words to review (${missedWords.length})</div>
+      <div class="missed-list">${items}</div>`;
+  }
+
+  document.getElementById('resultsCard').classList.add('visible');
+}
+
+/* ── Keyboard ────────────────────────────────────────────────────────────────*/
+document.getElementById('spellInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkAnswer();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && checked && document.activeElement !== document.getElementById('spellInput')) {
+    nextWord();
+  }
+});
+
+/* ── Honeycomb background ────────────────────────────────────────────────────*/
+const hcSvg = encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="100">` +
+  `<path d="M28 66L0 50V17L28 1l28 16v33zm0 34L0 84V51l28-16 28 16v33z"` +
+  ` fill="none" stroke="white" stroke-opacity="0.045" stroke-width="1"/>` +
+  `</svg>`
+);
+document.body.style.backgroundImage = `url("data:image/svg+xml,${hcSvg}")`;
+
+/* ── Boot ────────────────────────────────────────────────────────────────────*/
+startSession();
+</script>
+</body>
+</html>
